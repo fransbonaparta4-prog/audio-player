@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Audio Player</title>
+
+  <script>
+    /* ============================================
+       EDIT BAGIAN INI SAJA
+       ============================================ */
+
+    const CONFIG = {
+      // Ganti link musik kamu di sini (Google Drive / Dropbox / dll)
+      musicURL: "https://drive.google.com/uc?export=download&id=1x_aVPBbJga9NB1UsvWei1OSuhujrnc7t",
+
+      // Volume awal (0.0 sampai 1.0)
+      defaultVolume: 0.8,
+    };
+
+    /* ============================================
+       JANGAN EDIT DI BAWAH INI
+       ============================================ */
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .player {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 24px 28px;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .play-btn {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .play-btn:hover  { transform: scale(1.08); }
+    .play-btn:active { transform: scale(0.95); }
+    .play-btn svg    { width: 16px; height: 16px; fill: #111; }
+
+    .waveform {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 20px;
+    }
+    .bar {
+      width: 3px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.35);
+    }
+    .bar:nth-child(1) { height: 8px;  }
+    .bar:nth-child(2) { height: 14px; }
+    .bar:nth-child(3) { height: 18px; }
+    .bar:nth-child(4) { height: 10px; }
+    .bar:nth-child(5) { height: 16px; }
+    .bar:nth-child(6) { height: 8px;  }
+    .bar:nth-child(7) { height: 12px; }
+
+    .playing .bar { animation: wave 1s ease-in-out infinite; }
+    .bar:nth-child(1) { animation-delay: 0.00s; }
+    .bar:nth-child(2) { animation-delay: 0.10s; }
+    .bar:nth-child(3) { animation-delay: 0.20s; }
+    .bar:nth-child(4) { animation-delay: 0.30s; }
+    .bar:nth-child(5) { animation-delay: 0.15s; }
+    .bar:nth-child(6) { animation-delay: 0.25s; }
+    .bar:nth-child(7) { animation-delay: 0.05s; }
+
+    @keyframes wave {
+      0%, 100% { transform: scaleY(1); }
+      50%       { transform: scaleY(0.3); }
+    }
+
+    .progress-wrap {
+      position: relative;
+      height: 4px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 99px;
+      cursor: pointer;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #fff;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.1s linear;
+      pointer-events: none;
+    }
+    .progress-thumb {
+      position: absolute;
+      top: 50%; left: 0%;
+      transform: translate(-50%, -50%);
+      width: 12px; height: 12px;
+      background: #fff;
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.2s, left 0.1s linear;
+      pointer-events: none;
+    }
+    .progress-wrap:hover .progress-thumb { opacity: 1; }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .volume-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .vol-icon svg { width: 16px; height: 16px; fill: rgba(255,255,255,0.5); }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 3px;
+      border-radius: 99px;
+      outline: none;
+      cursor: pointer;
+      flex: 1;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="player">
+  <div class="controls-row">
+    <button class="play-btn" id="playBtn" onclick="togglePlay()">
+      <svg id="iconPlay"  viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="iconStop"  viewBox="0 0 24 24" style="display:none"><path d="M6 6h12v12H6z"/></svg>
+    </button>
+    <div class="waveform" id="waveform">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div>
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap" onclick="seek(event)">
+    <div class="progress-fill" id="progressFill"></div>
+    <div class="progress-thumb" id="progressThumb"></div>
+  </div>
+
+  <div class="time-row">
+    <span id="currentTime">0:00</span>
+    <span id="duration">0:00</span>
+  </div>
+
+  <div class="volume-row">
+    <div class="vol-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+    </div>
+    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" oninput="setVolume(this.value)">
+  </div>
+</div>
+
+<audio id="audio" preload="metadata"></audio>
+
+<script>
+  const audio     = document.getElementById('audio');
+  const iconPlay  = document.getElementById('iconPlay');
+  const iconStop  = document.getElementById('iconStop');
+  const fill      = document.getElementById('progressFill');
+  const thumb     = document.getElementById('progressThumb');
+  const curTime   = document.getElementById('currentTime');
+  const durEl     = document.getElementById('duration');
+  const waveform  = document.getElementById('waveform');
+  const volSlider = document.getElementById('volumeSlider');
+
+  // Apply config
+  audio.src       = CONFIG.musicURL;
+  audio.volume    = CONFIG.defaultVolume;
+  volSlider.value = CONFIG.defaultVolume;
+  updateVolSliderStyle(CONFIG.defaultVolume);
+
+  function togglePlay() {
+    audio.paused ? audio.play() : (audio.pause(), audio.currentTime = 0);
+  }
+
+  audio.addEventListener('play', () => {
+    iconPlay.style.display = 'none';
+    iconStop.style.display = 'block';
+    waveform.classList.add('playing');
+  });
+
+  audio.addEventListener('pause', () => {
+    iconPlay.style.display = 'block';
+    iconStop.style.display = 'none';
+    waveform.classList.remove('playing');
+  });
+
+  audio.addEventListener('ended', () => {
+    iconPlay.style.display = 'block';
+    iconStop.style.display = 'none';
+    waveform.classList.remove('playing');
+    fill.style.width = '0%';
+    thumb.style.left = '0%';
+    curTime.textContent = '0:00';
+  });
+
+  audio.addEventListener('loadedmetadata', () => {
+    durEl.textContent = fmt(audio.duration);
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    fill.style.width  = pct + '%';
+    thumb.style.left  = pct + '%';
+    curTime.textContent = fmt(audio.currentTime);
+  });
+
+  function seek(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+  }
+
+  function setVolume(val) {
+    audio.volume = val;
+    updateVolSliderStyle(val);
+  }
+
+  function updateVolSliderStyle(val) {
+    const pct = val * 100;
+    volSlider.style.background =
+      `linear-gradient(to right, rgba(255,255,255,0.8) ${pct}%, rgba(255,255,255,0.2) ${pct}%)`;
+  }
+
+  function fmt(s) {
+    const m = Math.floor(s / 60);
+    return `${m}:${Math.floor(s % 60).toString().padStart(2,'0')}`;
+  }
+</script>
+
+</body>
+</html>

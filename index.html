@@ -11,8 +11,9 @@
        ============================================ */
 
     const CONFIG = {
-      // Ganti link musik kamu di sini (Google Drive / Dropbox / dll)
-      musicURL: "https://drive.google.com/uc?export=download&id=1x_aVPBbJga9NB1UsvWei1OSuhujrnc7t",
+      // Ganti dengan nama file MP3 yang kamu upload ke GitHub
+      // Contoh: jika file kamu "lagu.mp3" maka isi seperti di bawah
+      musicURL: "one ok rock - Heartache.mp3",
 
       // Volume awal (0.0 sampai 1.0)
       defaultVolume: 0.8,
@@ -187,7 +188,7 @@
     </div>
   </div>
 
-  <div class="progress-wrap" id="progressWrap" onclick="seek(event)">
+  <div class="progress-wrap" onclick="seek(event)">
     <div class="progress-fill" id="progressFill"></div>
     <div class="progress-thumb" id="progressThumb"></div>
   </div>
@@ -218,7 +219,6 @@
   const waveform  = document.getElementById('waveform');
   const volSlider = document.getElementById('volumeSlider');
 
-  // Apply config
   audio.src       = CONFIG.musicURL;
   audio.volume    = CONFIG.defaultVolume;
   volSlider.value = CONFIG.defaultVolume;
@@ -277,8 +277,7 @@
   }
 
   function fmt(s) {
-    const m = Math.floor(s / 60);
-    return `${m}:${Math.floor(s % 60).toString().padStart(2,'0')}`;
+    return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
   }
 </script>
 
